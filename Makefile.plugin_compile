@@ -1,0 +1,43 @@
+exec_modeldir =  /usr/local/lib/rtxi
+
+LIBTOOL    =  /usr/local/share/rtxi/libtool
+CXX        =  g++
+CXXLD      =  g++
+CXXCOMPILE = $(LIBTOOL) --mode=compile $(CXX)
+CXXLINK    = $(LIBTOOL) --mode=link $(CXXLD)
+MOC        =  /usr/bin/moc
+
+CXXFLAGS := $(CXXFLAGS) -I. -I/usr/local/include/rtxi -I/usr/local/include/rtxi/plugins -I/usr/local/include/rtxi/libs -pipe -I/usr/local/include -I/usr/include/x86_64-linux-gnu/qt5/QtOpenGL -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtPrintSupport -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtXml -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtSvg -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/X11R6/include -I/usr/include/hdf5/serial -I/usr/include/qwt -I/usr/local/include/qwt -DQT_XML_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_WIDGETS_LIB -DQT_SVG_LIB -DQT_SHARED -w -O3 -std=c++11 -fPIC
+
+LDFLAGS  := $(LDFLAGS) -L/usr/local/lib/rtxi/libs -L/usr/local/lib -lQt5OpenGL -lQt5PrintSupport -lQt5Xml -lQt5Svg -lQt5Widgets -lQt5Gui -lQt5Network -lQt5Core -lgit2 -lqwt-qt5 -L/usr/lib/x86_64-linux-gnu/hdf5/serial -lhdf5 -lhdf5_hl -lGL -lpthread -lgsl -lgslcblas -lm -ldl -Wl,--no-as-needed -Wl,@/usr/xenomai/lib/modechk.wrappers -lalchemy -lcopperplate /usr/xenomai/lib/xenomai/bootstrap-pic.o -L/usr/xenomai/lib -lcobalt -lmodechk -lpthread -lrt -module -avoid-version
+
+ifdef DEBUG
+CXXFLAGS += -DDEBUG
+endif
+
+# 2018-01-17 : MFB edited to prepend julia stuff to existing OBJECTS variable.
+OBJECTS += $(shell echo $(SOURCES) | sed "s/\.cpp[ \t\n]*/\.lo /g")
+MOOBJECTS = $(shell echo $(HEADERS) | sed "s/\.h[ \t\n]*/\.lo /g")
+
+all: $(PLUGIN_NAME).la
+
+%.lo: %.cpp
+	$(CXXCOMPILE) $(CXXFLAGS) -c $< -o $@
+
+$(PLUGIN_NAME).la: $(OBJECTS) $(SOURCES) $(HEADERS)
+	$(CXXLINK) $(CXXFLAGS) $(LIBS) $(LDFLAGS) -rpath `readlink -f $(exec_modeldir)` -o $(PLUGIN_NAME).la $(OBJECTS)
+
+install: $(PLUGIN_NAME).la
+	$(LIBTOOL) --mode=install cp $(PLUGIN_NAME).la `readlink -f $(exec_modeldir)`
+
+clean:
+	rm -f $(OBJECTS)
+	rm -f $(MOOBJECTS)
+	rm -f moc_*
+	rm -f *.o
+	rm -f $(PLUGIN_NAME).la
+	rm -f $(PLUGIN_NAME).o
+	rm -rf .libs
+
+moc_%.cpp: %.h
+	$(MOC) -o $@ $<
